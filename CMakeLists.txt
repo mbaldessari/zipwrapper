@@ -34,6 +34,11 @@ if(BUILD_TESTING)
         tests/zipfile.cpp
         tests/zipstreams.cpp
         tests/collectioncollection.cpp
+        tests/testfiles.cpp
+    )
+
+    target_compile_definitions(zipwrapper_tests PRIVATE
+        TESTFILES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/testfiles"
     )
 
     target_link_libraries(zipwrapper_tests PRIVATE

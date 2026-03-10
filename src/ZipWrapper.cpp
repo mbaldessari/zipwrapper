@@ -185,16 +185,20 @@ std::unique_ptr<std::istream> ZipFile::getInputStream(const std::string& entry_n
     zip_stat_t stat;
     zip_stat_init(&stat);
     if (zip_stat_index(d->archive, static_cast<zip_uint64_t>(idx), 0, &stat) < 0) {
-        return nullptr;
+        throw IOException("Failed to stat entry: " + entry->getName());
     }
 
-    if (!(stat.valid & ZIP_STAT_SIZE) || stat.size > maxZipEntrySize) {
-        return nullptr;
+    if (!(stat.valid & ZIP_STAT_SIZE)) {
+        throw IOException("Entry size unknown: " + entry->getName());
+    }
+    if (stat.size > maxZipEntrySize) {
+        throw IOException("Entry exceeds 1 GiB size limit: " + entry->getName());
     }
 
     zip_file_t* zf = zip_fopen_index(d->archive, static_cast<zip_uint64_t>(idx), 0);
     if (!zf) {
-        return nullptr;
+        throw IOException(std::string("Failed to open entry: ") + entry->getName()
+                          + " (" + zip_strerror(d->archive) + ")");
     }
 
     std::vector<char> buf(static_cast<size_t>(stat.size));
@@ -202,8 +206,9 @@ std::unique_ptr<std::istream> ZipFile::getInputStream(const std::string& entry_n
     while (totalRead < stat.size) {
         zip_int64_t n = zip_fread(zf, buf.data() + totalRead, stat.size - totalRead);
         if (n < 0) {
+            std::string err = zip_file_strerror(zf);
             zip_fclose(zf);
-            return nullptr;
+            throw IOException("Failed to read entry: " + entry->getName() + " (" + err + ")");
         }
         if (n == 0) {
             break;

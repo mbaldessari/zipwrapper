@@ -156,21 +156,23 @@ std::unique_ptr<std::istream> ZipHeader::getInputStream(const std::string& entry
     zip_stat_t stat;
     zip_stat_init(&stat);
     if (zip_stat_index(d->archive, idx, 0, &stat) < 0) {
-        return nullptr;
+        throw zipios::IOException("Failed to stat entry: " + entry_name);
     }
 
     zip_file_t* zf = zip_fopen_index(d->archive, idx, 0);
     if (!zf) {
-        return nullptr;
+        throw zipios::IOException(std::string("Failed to open entry: ") + entry_name
+                                  + " (" + zip_strerror(d->archive) + ")");
     }
 
     std::vector<char> buf(static_cast<size_t>(stat.size));
     zip_int64_t bytesRead = zip_fread(zf, buf.data(), stat.size);
-    zip_fclose(zf);
-
     if (bytesRead < 0) {
-        return nullptr;
+        std::string err = zip_file_strerror(zf);
+        zip_fclose(zf);
+        throw zipios::IOException("Failed to read entry: " + entry_name + " (" + err + ")");
     }
+    zip_fclose(zf);
     buf.resize(static_cast<size_t>(bytesRead));
 
     return std::make_unique<zipios::MemoryIStream>(std::move(buf));
