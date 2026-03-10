@@ -51,3 +51,18 @@ if(BUILD_TESTING)
     include(GoogleTest)
     gtest_discover_tests(zipwrapper_tests)
 endif()
+
+# --- Documentation ---
+option(BUILD_DOCS "Build documentation (requires Doxygen and Python3)" OFF)
+if(BUILD_DOCS)
+    find_package(Doxygen REQUIRED)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_custom_target(docs
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/docs/m.css/documentation/doxygen.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/docs/conf.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs
+        COMMENT "Generating documentation with m.css + Doxygen"
+        VERBATIM
+    )
+endif()

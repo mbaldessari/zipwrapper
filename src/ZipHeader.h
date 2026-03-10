@@ -30,39 +30,49 @@
 namespace zipios
 {
 
-/** ZipHeader is a FileCollection, where the files are stored in a .zip file.
- * The class is similar to ZipFile with the difference that instead of
- * a file a std::istream can be passed.
- */
+/// @brief A FileCollection that reads a zip archive from a std::istream.
+///
+/// Similar to ZipFile but accepts a stream instead of a file path.
+/// This is useful when the zip data is embedded inside a larger file
+/// (e.g. a binary program with an appended zip payload) -- the start
+/// and end offsets allow extracting just the zip portion.
+///
+/// @note The entire relevant portion of the stream is copied into memory
+///       on construction.
 class ZipHeader: public FileCollection
 {
 public:
-    /** Opens the zip file name. If the zip "file" is
-        embedded in a file that contains other data, e.g. a binary
-        program, the offset of the zip file start and end must be
-        specified.
-        @param inp The input stream of the zip file to open.
-        @param s_off Offset relative to the start of the file, that
-        indicates the beginning of the zip file.
-        @param e_off Offset relative to the end of the file, that
-        indicates the end of the zip file. The offset is a positive number,
-        even though the offset is towards the beginning of the file.
-        @throw FCollException Thrown if the specified file name is not a valid zip
-        archive.
-        @throw IOException Thrown if an I/O problem is encountered, while the directory
-        of the specified zip archive is being read. */
+    /// @brief Open a zip archive from an input stream.
+    ///
+    /// If the zip data is embedded inside a larger file, use @p s_off
+    /// and @p e_off to delimit the zip region.
+    ///
+    /// @param inp  The input stream containing zip data.
+    /// @param s_off Byte offset from the start of the stream where the
+    ///              zip data begins (default 0).
+    /// @param e_off Byte offset from the **end** of the stream where the
+    ///              zip data ends. This is a positive number even though
+    ///              the offset is towards the beginning of the file (default 0).
+    /// @throw FCollException If the stream does not contain a valid zip archive
+    ///                       at the specified offsets.
     explicit ZipHeader(std::istream& inp, int s_off = 0, int e_off = 0);
     ~ZipHeader() override;
 
     ZipHeader(const ZipHeader&) = delete;
     ZipHeader& operator=(const ZipHeader&) = delete;
 
-    /** Create a copy of this instance. */
+    /// @brief Create a copy of this instance.
+    /// @return An invalid (empty) ZipHeader, since deep-copying the
+    ///         underlying libzip state is not supported.
     std::unique_ptr<FileCollection> clone() const override;
 
+    /// @brief Close the archive and release resources.
     void close() override;
 
+    /// @copydoc FileCollection::getInputStream(const ConstEntryPointer&)
     std::unique_ptr<std::istream> getInputStream(const ConstEntryPointer& entry) override;
+
+    /// @copydoc FileCollection::getInputStream(const std::string&, MatchPath)
     std::unique_ptr<std::istream> getInputStream(const std::string& entry_name,
                                                  MatchPath matchpath = MATCH) override;
 

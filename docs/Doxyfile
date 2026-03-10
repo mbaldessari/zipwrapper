@@ -1,0 +1,43 @@
+# Doxyfile for zipwrapper++ (consumed by m.css)
+
+PROJECT_NAME           = "zipwrapper++"
+PROJECT_BRIEF          = "A lightweight C++17 zip I/O library wrapping libzip"
+
+INPUT                  = ../src/ZipWrapper.h ../src/ZipHeader.h mainpage.dox
+RECURSIVE              = NO
+
+# m.css consumes XML output, not HTML
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = YES
+XML_OUTPUT             = xml
+XML_PROGRAMLISTING     = NO
+
+# Extraction settings
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+
+# Warning settings
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+WARN_IF_DOC_ERROR      = YES
+
+# C++ settings
+BUILTIN_STL_SUPPORT    = YES
+JAVADOC_AUTOBRIEF      = NO
+QT_AUTOBRIEF           = NO
+STRIP_FROM_PATH        = ../src
+STRIP_FROM_INC_PATH    = ../src
+
+# Namespace & class settings
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+SORT_MEMBER_DOCS       = NO
+SORT_BRIEF_DOCS        = NO
+
+# Preprocessor
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = NO

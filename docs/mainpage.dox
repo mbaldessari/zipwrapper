@@ -1,0 +1,55 @@
+/**
+@mainpage zipwrapper++
+
+@brief A lightweight C++17 zip I/O library wrapping libzip
+
+@section overview Overview
+
+**zipwrapper++** is a thin, modern C++17 wrapper around
+[libzip](https://libzip.org) and zlib providing:
+
+- Reading zip archives via @ref zipios::ZipFile (from disk) or
+  @ref zipios::ZipHeader (from a stream).
+- Writing zip archives via @ref zipios::ZipOutputStream.
+- Sequential archive iteration via @ref zipios::ZipInputStream.
+- On-the-fly gzip compression via @ref zipios::GZIPOutputStream.
+- Aggregating multiple collections with @ref zipios::CollectionCollection.
+
+The API intentionally mirrors the legacy *zipios++* interface so that
+existing FreeCAD code requires minimal changes.
+
+@section quickstart Quick start
+
+**Reading a zip file:**
+
+@code{.cpp}
+#include <ZipWrapper.h>
+
+zipios::ZipFile zf("archive.zip");
+
+// List all entries
+for (const auto& entry : zf.entries()) {
+    std::cout << entry->getName() << "\n";
+}
+
+// Read a specific entry
+auto stream = zf.getInputStream("README.txt");
+// read from *stream like any std::istream
+@endcode
+
+**Writing a zip file:**
+
+@code{.cpp}
+#include <ZipWrapper.h>
+
+zipios::ZipOutputStream zos("output.zip");
+zos.putNextEntry("hello.txt");
+zos << "Hello, world!";
+zos.close();
+@endcode
+
+@section ns Namespace
+
+All classes live in the @ref zipios namespace (kept for source compatibility
+with the original zipios++ library).
+*/
