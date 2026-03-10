@@ -45,3 +45,5 @@ valgrind --tool=callgrind --callgrind-out-file=callgrind.out.after ./build/zipwr
 # Check the top calls in our code
 callgrind_annotate --auto=yes --inclusive=no callgrind.out.444281 2>&1 | grep -E "(ZipWrapper|ZipHeader|zipios|FileEntry|FileCollection)" | head -20
 ```
+
+Some callgrind [numbers](https://mbaldessari.github.io/zipwrapper/dev/bench/) recorded over time
