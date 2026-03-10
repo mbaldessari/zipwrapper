@@ -1,0 +1,39 @@
+name: Valgrind
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/valgrind.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/valgrind.yml'
+
+jobs:
+  valgrind:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake pkg-config \
+            libzip-dev zlib1g-dev \
+            libgtest-dev valgrind
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build -j$(nproc)
+
+      - name: Run tests under Valgrind
+        run: cmake --build build --target valgrind
