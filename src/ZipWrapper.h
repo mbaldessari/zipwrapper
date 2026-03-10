@@ -248,15 +248,15 @@ public:
     {}
 
     /// @brief Get the full entry path (e.g. "subdir/file.txt").
-    /// @return The entry name.
-    std::string getName() const
+    /// @return A const reference to the entry name.
+    const std::string& getName() const
     {
         return _name;
     }
 
     /// @brief Alias for getName(); kept for API compatibility.
-    /// @return The entry name.
-    std::string getFileName() const
+    /// @return A const reference to the entry name.
+    const std::string& getFileName() const
     {
         return _name;
     }
@@ -284,8 +284,8 @@ public:
     }
 
     /// @brief Convert to string (returns the entry name).
-    /// @return The entry name.
-    std::string toString() const
+    /// @return A const reference to the entry name.
+    const std::string& toString() const
     {
         return _name;
     }
@@ -396,8 +396,8 @@ public:
     virtual std::unique_ptr<FileCollection> clone() const = 0;
 
     /// @brief Get the name of this collection (typically the archive file path).
-    /// @return The collection name.
-    std::string getName() const
+    /// @return A const reference to the collection name.
+    const std::string& getName() const
     {
         return _name;
     }
