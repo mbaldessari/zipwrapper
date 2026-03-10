@@ -80,7 +80,7 @@ jobs:
           sudo apt-get install -y \
             cmake pkg-config \
             libzip-dev zlib1g-dev \
-            cppcheck
+            libgtest-dev cppcheck
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
