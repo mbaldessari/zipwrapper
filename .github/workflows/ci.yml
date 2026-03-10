@@ -47,6 +47,53 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake pkg-config \
+            libzip-dev zlib1g-dev \
+            libgtest-dev clang-tidy
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy
+        run: |
+          clang-tidy -p build src/ZipWrapper.cpp src/ZipHeader.cpp \
+            --warnings-as-errors='*' \
+            --checks='-*,bugprone-*,clang-analyzer-*,modernize-*,performance-*,readability-*,-modernize-use-trailing-return-type'
+
+  cppcheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake pkg-config \
+            libzip-dev zlib1g-dev \
+            cppcheck
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --project=build/compile_commands.json \
+            --enable=warning,style,performance,portability \
+            --suppress=missingIncludeSystem \
+            --error-exitcode=1 \
+            --inline-suppr \
+            -i build/
+
   valgrind:
     runs-on: ubuntu-24.04
     steps:
