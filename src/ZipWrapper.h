@@ -25,6 +25,7 @@
 #pragma once
 
 #include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <istream>
 #include <memory>
@@ -193,12 +194,12 @@ public:
                 newPos = (egptr() - eback()) + off;
             }
             if (newPos < 0 || newPos > (egptr() - eback())) {
-                return std::streampos(-1);
+                return {-1};
             }
             setg(eback(), eback() + newPos, egptr());
             return newPos;
         }
-        return std::streampos(-1);
+        return {-1};
     }
 
     /// @brief Seek to an absolute position.
@@ -212,7 +213,7 @@ public:
 
     /// @brief Access the underlying data buffer (const).
     /// @return A const reference to the internal vector.
-    const std::vector<char>& data() const
+    [[nodiscard]] const std::vector<char>& data() const
     {
         return _data;
     }
@@ -285,28 +286,28 @@ public:
 
     /// @brief Get the full entry path (e.g. "subdir/file.txt").
     /// @return A const reference to the entry name.
-    const std::string& getName() const
+    [[nodiscard]] const std::string& getName() const
     {
         return _name;
     }
 
     /// @brief Alias for getName(); kept for API compatibility.
     /// @return A const reference to the entry name.
-    const std::string& getFileName() const
+    [[nodiscard]] const std::string& getFileName() const
     {
         return _name;
     }
 
     /// @brief Check whether this entry was properly initialized.
     /// @return @c true if this entry is valid, @c false otherwise.
-    bool isValid() const
+    [[nodiscard]] bool isValid() const
     {
         return _valid;
     }
 
     /// @brief Get the zero-based index of this entry within the archive.
     /// @return The entry index, or -1 if unknown.
-    int getIndex() const
+    [[nodiscard]] int getIndex() const
     {
         return _index;
     }
@@ -314,14 +315,14 @@ public:
     /// @brief Check whether this entry represents a directory.
     /// @return @c true if the entry name ends with '/'.
     /// @note Zip convention: directory entries always end with '/'.
-    bool isDirectory() const
+    [[nodiscard]] bool isDirectory() const
     {
         return !_name.empty() && _name.back() == '/';
     }
 
     /// @brief Convert to string (returns the entry name).
     /// @return A const reference to the entry name.
-    const std::string& toString() const
+    [[nodiscard]] const std::string& toString() const
     {
         return _name;
     }
@@ -367,7 +368,7 @@ class FileCollection
 {
 public:
     /// @brief Controls how entry names are matched in lookup methods.
-    enum MatchPath
+    enum MatchPath : std::uint8_t
     {
         MATCH,       ///< Match the full path (e.g. "subdir/file.txt").
         IGNORE_PATH  ///< Match only the filename part, ignoring directories.
@@ -413,7 +414,7 @@ public:
 
     /// @brief Check whether this collection is in a usable state.
     /// @return @c true if the collection is valid, @c false after close().
-    virtual bool isValid() const
+    [[nodiscard]] virtual bool isValid() const
     {
         return _valid;
     }
@@ -433,14 +434,14 @@ public:
 
     /// @brief Get the name of this collection (typically the archive file path).
     /// @return A const reference to the collection name.
-    const std::string& getName() const
+    [[nodiscard]] const std::string& getName() const
     {
         return _name;
     }
 
     /// @brief Get the number of entries in this collection.
     /// @return The entry count.
-    size_t size() const
+    [[nodiscard]] size_t size() const
     {
         return _entries.size();
     }

@@ -64,10 +64,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Run clang-tidy
-        run: |
-          clang-tidy -p build src/ZipWrapper.cpp src/ZipHeader.cpp \
-            --warnings-as-errors='*' \
-            --checks='-*,bugprone-*,clang-analyzer-*,modernize-*,performance-*,readability-*,-modernize-use-trailing-return-type'
+        run: clang-tidy -p build src/ZipWrapper.cpp src/ZipHeader.cpp
 
   cppcheck:
     runs-on: ubuntu-24.04

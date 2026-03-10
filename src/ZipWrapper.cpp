@@ -50,6 +50,8 @@ namespace
 // Reject obviously corrupted or malicious entries that would exhaust memory.
 // 1 GiB is far above any realistic .FCStd entry but still prevents OOM.
 constexpr zip_uint64_t maxZipEntrySize = zip_uint64_t{1} << 30;
+constexpr size_t chunkSize = 65536;
+constexpr size_t gzipBufSize = 16384;
 
 // Extract the filename part from a path (after the last '/')
 std::string_view filenameFromPath(const std::string& path)
@@ -131,7 +133,7 @@ ZipFile::~ZipFile()
 }
 
 ZipFile::ZipFile(ZipFile&& other) noexcept
-    : FileCollection(std::move(other))
+    : FileCollection(other)
     , d(std::move(other.d))
 {
     other._valid = false;
@@ -143,7 +145,7 @@ ZipFile& ZipFile::operator=(ZipFile&& other) noexcept
         if (d && d->archive) {
             zip_close(d->archive);
         }
-        FileCollection::operator=(std::move(other));
+        FileCollection::operator=(other);
         d = std::move(other.d);
         other._valid = false;
     }
@@ -395,7 +397,7 @@ ZipOutputStream::~ZipOutputStream()
     try {
         close();
     }
-    catch (...) {
+    catch (...) {  // NOLINT(bugprone-empty-catch)
     }
 }
 
@@ -510,7 +512,7 @@ ZipInputStream::ZipInputStream(std::istream& is)
     }
     else {
         is.clear();
-        std::array<char, 65536> buf{};
+        std::array<char, chunkSize> buf{};
         while (is.read(buf.data(), buf.size()) || is.gcount() > 0) {
             d->archiveData.insert(d->archiveData.end(),
                                   buf.data(), buf.data() + is.gcount());
@@ -650,7 +652,7 @@ public:
         try {
             finalize();
         }
-        catch (...) {
+        catch (...) {  // NOLINT(bugprone-empty-catch)
         }
     }
 
@@ -722,7 +724,7 @@ protected:
 private:
     int flushBuffer()
     {
-        size_t dataSize = static_cast<size_t>(pptr() - pbase());
+        auto dataSize = static_cast<size_t>(pptr() - pbase());
         if (dataSize == 0) {
             return 0;
         }
@@ -753,8 +755,8 @@ private:
     std::ostream& _os;
     z_stream _zstream {};
     bool _initialized = false;
-    std::array<char, 16384> _inBuf {};
-    std::array<char, 16384> _outBuf {};
+    std::array<char, gzipBufSize> _inBuf {};
+    std::array<char, gzipBufSize> _outBuf {};
 };
 
 }  // namespace
@@ -779,7 +781,7 @@ GZIPOutputStream::~GZIPOutputStream()
     try {
         close();
     }
-    catch (...) {
+    catch (...) {  // NOLINT(bugprone-empty-catch)
     }
 }
 
