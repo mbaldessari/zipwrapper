@@ -489,8 +489,32 @@ ZipInputStream::ZipInputStream(std::istream& is)
 {
     // Slurp the whole stream into memory -- libzip wants random access and
     // std::istream doesn't guarantee seekability, so this is the safe bet.
-    d->archiveData.assign(std::istreambuf_iterator<char>(is),
-                          std::istreambuf_iterator<char>());
+    // Try to determine size via seek for a single bulk read; fall back to
+    // chunked reads if seeking isn't supported.
+    auto startPos = is.tellg();
+    if (startPos != std::streampos(-1) && is.seekg(0, std::ios::end)) {
+        auto endPos = is.tellg();
+        if (endPos != std::streampos(-1)) {
+            auto size = endPos - startPos;
+            d->archiveData.resize(static_cast<size_t>(size));
+            is.seekg(startPos);
+            is.read(d->archiveData.data(), size);
+        }
+        else {
+            is.clear();
+            is.seekg(startPos);
+            d->archiveData.assign(std::istreambuf_iterator<char>(is),
+                                  std::istreambuf_iterator<char>());
+        }
+    }
+    else {
+        is.clear();
+        std::array<char, 65536> buf{};
+        while (is.read(buf.data(), buf.size()) || is.gcount() > 0) {
+            d->archiveData.insert(d->archiveData.end(),
+                                  buf.data(), buf.data() + is.gcount());
+        }
+    }
     d->openArchive("stream");
 
     rdbuf(&d->currentBuf);
@@ -503,13 +527,14 @@ ZipInputStream::ZipInputStream(const std::string& filename)
     : std::istream(nullptr)
     , d(std::make_unique<Impl>())
 {
-    std::ifstream file(filename, std::ios::binary);
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
     if (!file) {
         throw IOException("Failed to open file: " + filename);
     }
-    d->archiveData.assign(std::istreambuf_iterator<char>(file),
-                          std::istreambuf_iterator<char>());
-    file.close();
+    auto size = file.tellg();
+    d->archiveData.resize(static_cast<size_t>(size));
+    file.seekg(0);
+    file.read(d->archiveData.data(), size);
 
     d->openArchive("file: " + filename);
 
