@@ -50,6 +50,22 @@ if(BUILD_TESTING)
 
     include(GoogleTest)
     gtest_discover_tests(zipwrapper_tests)
+
+    # --- Valgrind memory-leak check ---
+    find_program(VALGRIND_EXECUTABLE valgrind)
+    if(VALGRIND_EXECUTABLE)
+        add_custom_target(valgrind
+            COMMAND ${VALGRIND_EXECUTABLE}
+                    --leak-check=full
+                    --show-leak-kinds=all
+                    --errors-for-leak-kinds=definite,possible
+                    --error-exitcode=1
+                    $<TARGET_FILE:zipwrapper_tests>
+            DEPENDS zipwrapper_tests
+            COMMENT "Running all tests under Valgrind"
+            VERBATIM
+        )
+    endif()
 endif()
 
 # --- Documentation ---
