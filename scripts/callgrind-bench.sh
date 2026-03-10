@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run callgrind on selected tests and output results as JSON
-# compatible with github-action-benchmark's "customSmallerIsBetter" format.
+# compatible with github-action-benchmark's "googlecpp" (Google Benchmark) format.
 #
 # Usage: scripts/callgrind-bench.sh <test-binary> [output.json]
 
@@ -29,7 +29,7 @@ TESTS=(
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
-JSON="["
+BENCHMARKS=""
 FIRST=true
 
 for TEST in "${TESTS[@]}"; do
@@ -54,14 +54,35 @@ for TEST in "${TESTS[@]}"; do
     if [ "$FIRST" = true ]; then
         FIRST=false
     else
-        JSON+=","
+        BENCHMARKS+=","
     fi
 
-    JSON+="$(printf '\n  {"name": "%s", "unit": "instructions", "value": %s}' "$TEST" "$INSTRUCTIONS")"
+    # Google Benchmark JSON format: each benchmark has name, iterations, and
+    # a metric. We use "instructions" as a custom counter via real_time field
+    # (the benchmark-action uses this for comparison).
+    BENCHMARKS+="$(printf '\n    {
+      "name": "%s",
+      "run_name": "%s",
+      "run_type": "iteration",
+      "iterations": 1,
+      "real_time": %s,
+      "cpu_time": %s,
+      "time_unit": "ns"
+    }' "$TEST" "$TEST" "$INSTRUCTIONS" "$INSTRUCTIONS")"
     echo "  $TEST: $INSTRUCTIONS instructions" >&2
 done
 
-JSON+=$'\n]'
+# Write Google Benchmark JSON envelope
+cat > "$OUTPUT" <<ENDJSON
+{
+  "context": {
+    "date": "$(date -Iseconds)",
+    "num_cpus": $(nproc),
+    "library_build_type": "release"
+  },
+  "benchmarks": [${BENCHMARKS}
+  ]
+}
+ENDJSON
 
-echo "$JSON" > "$OUTPUT"
 echo "Results written to $OUTPUT" >&2

@@ -27,9 +27,8 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-24.04
     steps:
+      # zizmor: ignore[artipacked] -- credentials needed for auto-push to gh-pages
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
 
       - name: Install dependencies
         run: |
@@ -50,7 +49,7 @@ jobs:
       - name: Store and compare benchmark results
         uses: benchmark-action/github-action-benchmark@fd31771ce86cc65eab85653da103f71ab1b4479c # v1.9.0
         with:
-          tool: customSmallerIsBetter
+          tool: googlecpp
           output-file-path: benchmark-results.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # On push to main: store results on gh-pages
