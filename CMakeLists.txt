@@ -55,9 +55,22 @@ if(BUILD_TESTING)
     find_program(VALGRIND_EXECUTABLE valgrind)
     if(VALGRIND_EXECUTABLE)
         add_custom_target(valgrind
+            COMMAND ${CMAKE_COMMAND} -E echo
+                    "${VALGRIND_EXECUTABLE}"
+                    --leak-check=full
+                    --show-leak-kinds=all
+                    --track-origins=yes
+                    --malloc-fill=0x42
+                    --free-fill=0x61
+                    --errors-for-leak-kinds=definite,possible
+                    --error-exitcode=1
+                    "$<TARGET_FILE:zipwrapper_tests>"
             COMMAND ${VALGRIND_EXECUTABLE}
                     --leak-check=full
                     --show-leak-kinds=all
+                    --track-origins=yes
+                    --malloc-fill=0x42
+                    --free-fill=0x61
                     --errors-for-leak-kinds=definite,possible
                     --error-exitcode=1
                     $<TARGET_FILE:zipwrapper_tests>
