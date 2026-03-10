@@ -26,8 +26,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: true
 
       - name: Install dependencies
         run: |
@@ -53,8 +51,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: true
 
       - name: Install dependencies
         run: |
