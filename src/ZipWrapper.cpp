@@ -52,13 +52,13 @@ namespace
 constexpr zip_uint64_t maxZipEntrySize = zip_uint64_t{1} << 30;
 
 // Extract the filename part from a path (after the last '/')
-std::string filenameFromPath(const std::string& path)
+std::string_view filenameFromPath(const std::string& path)
 {
     auto pos = path.find_last_of('/');
     if (pos == std::string::npos) {
         return path;
     }
-    return path.substr(pos + 1);
+    return std::string_view(path).substr(pos + 1);
 }
 
 }  // namespace
@@ -67,14 +67,17 @@ std::string filenameFromPath(const std::string& path)
 
 ConstEntryPointer FileCollection::getEntry(const std::string& name, MatchPath matchpath) const
 {
-    for (const auto& ep : _entries) {
-        if (matchpath == MATCH) {
+    if (matchpath == MATCH) {
+        for (const auto& ep : _entries) {
             if (ep->getName() == name) {
                 return ep;
             }
         }
-        else {
-            if (filenameFromPath(ep->getName()) == filenameFromPath(name)) {
+    }
+    else {
+        auto target = filenameFromPath(name);
+        for (const auto& ep : _entries) {
+            if (filenameFromPath(ep->getName()) == target) {
                 return ep;
             }
         }
