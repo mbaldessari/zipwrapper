@@ -75,10 +75,11 @@ ConstEntryPointer FileCollection::getEntry(const std::string& name, MatchPath ma
     }
     else {
         auto target = filenameFromPath(name);
-        for (const auto& ep : _entries) {
-            if (filenameFromPath(ep->getName()) == target) {
-                return ep;
-            }
+        auto it = std::find_if(_entries.begin(), _entries.end(), [&target](const auto& ep) {
+            return filenameFromPath(ep->getName()) == target;
+        });
+        if (it != _entries.end()) {
+            return *it;
         }
     }
     return {};
@@ -810,7 +811,7 @@ std::unique_ptr<FileCollection> CollectionCollection::clone() const
 ConstEntries CollectionCollection::entries() const
 {
     ConstEntries result;
-    for (auto* col : _collections) {
+    for (const auto* col : _collections) {
         auto ents = col->entries();
         result.insert(result.end(), ents.begin(), ents.end());
     }
@@ -820,7 +821,7 @@ ConstEntries CollectionCollection::entries() const
 ConstEntryPointer CollectionCollection::getEntry(const std::string& name,
                                                   MatchPath matchpath) const
 {
-    for (auto* col : _collections) {
+    for (const auto* col : _collections) {
         auto e = col->getEntry(name, matchpath);
         if (e) {
             return e;

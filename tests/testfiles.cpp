@@ -30,14 +30,13 @@ std::vector<std::string> findFilesByExtension(const char* dir,
         auto ext = entry.path().extension().string();
         // lowercase for comparison
         std::string extLower = ext;
-        for (auto& c : extLower) {
-            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        }
-        for (const auto& wanted : extensions) {
-            if (extLower == wanted) {
-                result.push_back(entry.path().string());
-                break;
-            }
+        std::transform(extLower.begin(), extLower.end(), extLower.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        if (std::any_of(extensions.begin(), extensions.end(), [&extLower](const auto& wanted) {
+                return extLower == wanted;
+            })) {
+            result.push_back(entry.path().string());
         }
     }
     std::sort(result.begin(), result.end());
@@ -48,11 +47,9 @@ std::vector<std::string> findFilesByExtension(const char* dir,
 std::string testNameFromPath(const ::testing::TestParamInfo<std::string>& info)
 {
     auto stem = std::filesystem::path(info.param).stem().string();
-    for (auto& c : stem) {
-        if (!std::isalnum(static_cast<unsigned char>(c))) {
-            c = '_';
-        }
-    }
+    std::replace_if(
+        stem.begin(), stem.end(),
+        [](unsigned char c) { return !std::isalnum(c); }, '_');
     return stem;
 }
 
