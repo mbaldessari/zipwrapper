@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-22.04]
+        compiler: [gcc, clang]
+        build_type: [Debug, Release]
+        include:
+          - compiler: gcc
+            cc: gcc
+            cxx: g++
+          - compiler: clang
+            cc: clang
+            cxx: clang++
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake pkg-config \
+            libzip-dev zlib1g-dev \
+            libgtest-dev
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  valgrind:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake pkg-config \
+            libzip-dev zlib1g-dev \
+            libgtest-dev valgrind
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build -j$(nproc)
+
+      - name: Run tests under Valgrind
+        run: cmake --build build --target valgrind
