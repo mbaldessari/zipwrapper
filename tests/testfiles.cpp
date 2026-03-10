@@ -12,29 +12,54 @@
 #error "TESTFILES_DIR must be defined"
 #endif
 
+#ifndef FREECAD_TESTFILES_DIR
+#error "FREECAD_TESTFILES_DIR must be defined"
+#endif
+
 namespace
 {
 
-// Collect all .zip files under TESTFILES_DIR recursively
-std::vector<std::string> findZipFiles()
+std::vector<std::string> findFilesByExtension(const char* dir,
+                                              const std::vector<std::string>& extensions)
 {
     std::vector<std::string> result;
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(TESTFILES_DIR)) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(dir)) {
         if (!entry.is_regular_file()) {
             continue;
         }
         auto ext = entry.path().extension().string();
-        if (ext == ".zip") {
-            result.push_back(entry.path().string());
+        // lowercase for comparison
+        std::string extLower = ext;
+        for (auto& c : extLower) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        for (const auto& wanted : extensions) {
+            if (extLower == wanted) {
+                result.push_back(entry.path().string());
+                break;
+            }
         }
     }
     std::sort(result.begin(), result.end());
     return result;
 }
 
+// Shared test name generator: filename stem with non-alnum replaced by underscore
+std::string testNameFromPath(const ::testing::TestParamInfo<std::string>& info)
+{
+    auto stem = std::filesystem::path(info.param).stem().string();
+    for (auto& c : stem) {
+        if (!std::isalnum(static_cast<unsigned char>(c))) {
+            c = '_';
+        }
+    }
+    return stem;
+}
+
 }  // namespace
 
-class TestFilesExtract: public ::testing::TestWithParam<std::string>
+// Shared test fixture for extracting all entries from a zip/fcstd archive
+class ArchiveExtractTest: public ::testing::TestWithParam<std::string>
 {
 protected:
     void SetUp() override
@@ -49,79 +74,89 @@ protected:
         std::filesystem::remove_all(tmpDir);
     }
 
+    void extractAll()
+    {
+        const std::string& zipPath = GetParam();
+
+        zipios::ZipFile zf(zipPath);
+        ASSERT_TRUE(zf.isValid()) << "Failed to open: " << zipPath;
+
+        auto entries = zf.entries();
+
+        for (const auto& entry : entries) {
+            if (entry->isDirectory()) {
+                if (entry->getName().size() > 255) {
+                    continue;
+                }
+                std::filesystem::create_directories(tmpDir / entry->getName());
+                continue;
+            }
+
+            std::unique_ptr<std::istream> is;
+            try {
+                is = zf.getInputStream(entry);
+            }
+            catch (const zipios::IOException& e) {
+                std::cout << "  [SKIP] " << zipPath << ": " << entry->getName()
+                          << ": " << e.what() << std::endl;
+                continue;
+            }
+
+            if (!is) {
+                continue;
+            }
+
+            auto filename = std::filesystem::path(entry->getName()).filename().string();
+            if (filename.size() > 255) {
+                std::cout << "  [SKIP] " << zipPath << ": filename too long ("
+                          << filename.size() << " bytes)" << std::endl;
+                continue;
+            }
+
+            auto outPath = tmpDir / entry->getName();
+            std::filesystem::create_directories(outPath.parent_path());
+
+            std::ofstream out(outPath, std::ios::binary);
+            ASSERT_TRUE(out.good()) << "Failed to create: " << outPath;
+            out << is->rdbuf();
+            out.close();
+
+            EXPECT_TRUE(std::filesystem::exists(outPath))
+                << "File not written: " << outPath;
+        }
+    }
+
     std::filesystem::path tmpDir;
 };
 
-TEST_P(TestFilesExtract, OpenAndExtractAll)
+
+// --- .zip test files ---
+
+class ZipFilesExtract: public ArchiveExtractTest {};
+
+TEST_P(ZipFilesExtract, OpenAndExtractAll)
 {
-    const std::string& zipPath = GetParam();
-
-    // Open the zip file
-    zipios::ZipFile zf(zipPath);
-    ASSERT_TRUE(zf.isValid()) << "Failed to open: " << zipPath;
-
-    auto entries = zf.entries();
-
-    for (const auto& entry : entries) {
-        if (entry->isDirectory()) {
-            auto dirPath = tmpDir / entry->getName();
-            // Skip directory names that are too long for the filesystem
-            if (entry->getName().size() > 255) {
-                continue;
-            }
-            std::filesystem::create_directories(dirPath);
-            continue;
-        }
-
-        std::unique_ptr<std::istream> is;
-        try {
-            is = zf.getInputStream(entry);
-        }
-        catch (const zipios::IOException& e) {
-            std::cout << "  [SKIP] " << zipPath << ": " << entry->getName()
-                      << ": " << e.what() << std::endl;
-            continue;
-        }
-
-        if (!is) {
-            continue;
-        }
-
-        // Skip entries with filenames too long for the filesystem
-        auto filename = std::filesystem::path(entry->getName()).filename().string();
-        if (filename.size() > 255) {
-            std::cout << "  [SKIP] " << zipPath << ": filename too long ("
-                      << filename.size() << " bytes)" << std::endl;
-            continue;
-        }
-
-        // Ensure parent directories exist
-        auto outPath = tmpDir / entry->getName();
-        std::filesystem::create_directories(outPath.parent_path());
-
-        // Write entry contents to disk
-        std::ofstream out(outPath, std::ios::binary);
-        ASSERT_TRUE(out.good()) << "Failed to create: " << outPath;
-        out << is->rdbuf();
-        out.close();
-
-        EXPECT_TRUE(std::filesystem::exists(outPath))
-            << "File not written: " << outPath;
-    }
+    extractAll();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     TestFiles,
-    TestFilesExtract,
-    ::testing::ValuesIn(findZipFiles()),
-    [](const ::testing::TestParamInfo<std::string>& info) {
-        // Use the filename (without extension) as test name
-        auto stem = std::filesystem::path(info.param).stem().string();
-        // Replace non-alphanumeric chars with underscore for gtest
-        for (auto& c : stem) {
-            if (!std::isalnum(static_cast<unsigned char>(c))) {
-                c = '_';
-            }
-        }
-        return stem;
-    });
+    ZipFilesExtract,
+    ::testing::ValuesIn(findFilesByExtension(TESTFILES_DIR, {".zip"})),
+    testNameFromPath);
+
+
+// --- .FCStd test files ---
+
+class FCStdFilesExtract: public ArchiveExtractTest {};
+
+TEST_P(FCStdFilesExtract, OpenAndExtractAll)
+{
+    extractAll();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FreecadTestFiles,
+    FCStdFilesExtract,
+    ::testing::ValuesIn(findFilesByExtension(FREECAD_TESTFILES_DIR, {".fcstd"})),
+    testNameFromPath);

@@ -39,6 +39,7 @@ if(BUILD_TESTING)
 
     target_compile_definitions(zipwrapper_tests PRIVATE
         TESTFILES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/testfiles"
+        FREECAD_TESTFILES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/freecadtestfiles"
     )
 
     target_link_libraries(zipwrapper_tests PRIVATE
