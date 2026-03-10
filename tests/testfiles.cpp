@@ -77,18 +77,21 @@ TEST_P(TestFilesExtract, OpenAndExtractAll)
         try {
             is = zf.getInputStream(entry);
         }
-        catch (const zipios::IOException&) {
+        catch (const zipios::IOException& e) {
+            std::cout << "  [SKIP] " << zipPath << ": " << entry->getName()
+                      << ": " << e.what() << std::endl;
             continue;
         }
 
         if (!is) {
-            // Entry not found (shouldn't happen when iterating entries())
             continue;
         }
 
         // Skip entries with filenames too long for the filesystem
         auto filename = std::filesystem::path(entry->getName()).filename().string();
         if (filename.size() > 255) {
+            std::cout << "  [SKIP] " << zipPath << ": filename too long ("
+                      << filename.size() << " bytes)" << std::endl;
             continue;
         }
 
