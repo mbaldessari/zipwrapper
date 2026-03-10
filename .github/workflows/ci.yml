@@ -6,8 +6,12 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions: {}
+
 jobs:
   build-and-test:
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -25,7 +29,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         run: |
@@ -48,9 +54,13 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   clang-tidy:
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         run: |
@@ -67,9 +77,13 @@ jobs:
         run: clang-tidy -p build src/ZipWrapper.cpp src/ZipHeader.cpp
 
   cppcheck:
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         run: |
