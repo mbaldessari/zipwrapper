@@ -51,6 +51,36 @@ namespace
 // 1 GiB is far above any realistic .FCStd entry but still prevents OOM.
 constexpr zip_uint64_t maxZipEntrySize = zip_uint64_t{1} << 30;
 
+// Check if a zip entry name contains path-traversal sequences (Zip Slip, CVE-2018-1002200).
+// Returns true if the name is safe, false if it should be rejected.
+bool isSafeEntryName(const char* name)
+{
+    if (!name || name[0] == '\0') {
+        return false;
+    }
+    // Reject absolute paths
+    if (name[0] == '/' || name[0] == '\\') {
+        return false;
+    }
+    // Reject Windows-style absolute paths (e.g. "C:\...")
+    if (std::isalpha(static_cast<unsigned char>(name[0])) && name[1] == ':') {
+        return false;
+    }
+    // Reject any ".." component (Unix or Windows separators)
+    std::string_view sv(name);
+    size_t pos = 0;
+    while ((pos = sv.find("..", pos)) != std::string_view::npos) {
+        // Check that ".." is bounded by path separators (or start/end of string)
+        bool atStart = (pos == 0) || sv[pos - 1] == '/' || sv[pos - 1] == '\\';
+        bool atEnd = (pos + 2 >= sv.size()) || sv[pos + 2] == '/' || sv[pos + 2] == '\\';
+        if (atStart && atEnd) {
+            return false;
+        }
+        pos += 2;
+    }
+    return true;
+}
+
 // Extract the filename part from a path (after the last '/')
 std::string_view filenameFromPath(const std::string& path)
 {
@@ -114,7 +144,7 @@ ZipFile::ZipFile(const std::string& name, int /*s_off*/, int /*e_off*/)
     _entries.reserve(static_cast<size_t>(numEntries));
     for (zip_int64_t i = 0; i < numEntries; ++i) {
         const char* entryName = zip_get_name(d->archive, static_cast<zip_uint64_t>(i), 0);
-        if (entryName) {
+        if (entryName && isSafeEntryName(entryName)) {
             _entries.push_back(std::make_shared<FileEntry>(entryName, static_cast<int>(i)));
         }
     }
@@ -548,17 +578,24 @@ ZipInputStream::~ZipInputStream() = default;
 
 ConstEntryPointer ZipInputStream::getNextEntry()
 {
-    d->currentIndex++;
-
-    if (d->currentIndex >= d->numEntries) {
-        throw FCollException("No more entries in zip archive");
+    // Skip entries with path-traversal names (Zip Slip)
+    const char* name = nullptr;
+    for (;;) {
+        d->currentIndex++;
+        if (d->currentIndex >= d->numEntries) {
+            throw FCollException("No more entries in zip archive");
+        }
+        auto idx = static_cast<zip_uint64_t>(d->currentIndex);
+        name = zip_get_name(d->archive, idx, 0);
+        if (!name) {
+            throw IOException("Failed to get entry name");
+        }
+        if (isSafeEntryName(name)) {
+            break;
+        }
     }
 
     auto idx = static_cast<zip_uint64_t>(d->currentIndex);
-    const char* name = zip_get_name(d->archive, idx, 0);
-    if (!name) {
-        throw IOException("Failed to get entry name");
-    }
 
     zip_stat_t stat;
     zip_stat_init(&stat);

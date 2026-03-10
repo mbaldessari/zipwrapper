@@ -1237,4 +1237,103 @@ TEST_F(ZipHeaderTest, WithOffsets)
     EXPECT_EQ(content, "offset content");
 }
 
+// --- Zip Slip (CVE-2018-1002200) tests ---
+
+TEST_F(ZipRoundTripTest, ZipSlipEntriesFilteredFromZipFile)
+{
+    // The zip-slip test archive contains "good.txt" and a path-traversal entry
+    std::string slipZip = std::string(TESTFILES_DIR) + "/zip-slip-vulnerability/zip-slip.zip";
+    zipios::ZipFile zf(slipZip);
+    EXPECT_TRUE(zf.isValid());
+
+    auto entries = zf.entries();
+    // Only safe entries should be visible
+    for (const auto& entry : entries) {
+        EXPECT_EQ(entry->getName().find(".."), std::string::npos)
+            << "Path traversal entry not filtered: " << entry->getName();
+    }
+
+    // The safe entry should still be accessible
+    auto goodEntry = zf.getEntry("good.txt");
+    EXPECT_NE(goodEntry, nullptr);
+}
+
+TEST_F(ZipRoundTripTest, ZipSlipWindowsEntriesFilteredFromZipFile)
+{
+    std::string slipZip = std::string(TESTFILES_DIR) + "/zip-slip-vulnerability/zip-slip-win.zip";
+    zipios::ZipFile zf(slipZip);
+    EXPECT_TRUE(zf.isValid());
+
+    auto entries = zf.entries();
+    for (const auto& entry : entries) {
+        EXPECT_EQ(entry->getName().find(".."), std::string::npos)
+            << "Path traversal entry not filtered: " << entry->getName();
+    }
+
+    auto goodEntry = zf.getEntry("good.txt");
+    EXPECT_NE(goodEntry, nullptr);
+}
+
+TEST_F(ZipRoundTripTest, ZipSlipEntriesFilteredFromZipInputStream)
+{
+    std::string slipZip = std::string(TESTFILES_DIR) + "/zip-slip-vulnerability/zip-slip.zip";
+    zipios::ZipInputStream zis(slipZip);
+
+    // The first (and only visible) entry should be good.txt, not the traversal one.
+    // ZipInputStream auto-loads the first safe entry.
+    std::string content((std::istreambuf_iterator<char>(zis)),
+                         std::istreambuf_iterator<char>());
+    EXPECT_FALSE(content.empty());
+
+    // There should be no more entries (traversal one was skipped)
+    EXPECT_THROW(zis.getNextEntry(), std::exception);
+}
+
+TEST_F(ZipRoundTripTest, ZipSlipEntriesFilteredFromZipHeader)
+{
+    std::string slipZip = std::string(TESTFILES_DIR) + "/zip-slip-vulnerability/zip-slip.zip";
+    std::ifstream file(slipZip, std::ios::binary);
+    zipios::ZipHeader hdr(file);
+    EXPECT_TRUE(hdr.isValid());
+
+    auto entries = hdr.entries();
+    for (const auto& entry : entries) {
+        EXPECT_EQ(entry->getName().find(".."), std::string::npos)
+            << "Path traversal entry not filtered: " << entry->getName();
+    }
+}
+
+TEST_F(ZipRoundTripTest, ZipSlipAbsolutePathFiltered)
+{
+    // Create a zip with an absolute path entry
+    zipios::ZipOutputStream zos(zipPath);
+    zos.putNextEntry("/etc/passwd");
+    zos << "root:x:0:0";
+    zos.putNextEntry("safe.txt");
+    zos << "safe content";
+    zos.close();
+
+    zipios::ZipFile zf(zipPath);
+    auto entries = zf.entries();
+
+    // Only safe.txt should be visible
+    EXPECT_EQ(entries.size(), 1);
+    EXPECT_EQ(entries[0]->getName(), "safe.txt");
+}
+
+TEST_F(ZipRoundTripTest, ZipSlipDoubleDotInFilenameAllowed)
+{
+    // A file named "foo..bar" is NOT a traversal — ".." must be a path component
+    writeZipFile(zipPath, {{"foo..bar.txt", "ok"}, {"dir/file..ext", "also ok"}});
+
+    zipios::ZipFile zf(zipPath);
+    EXPECT_EQ(zf.size(), 2);
+
+    auto e1 = zf.getEntry("foo..bar.txt");
+    EXPECT_NE(e1, nullptr);
+
+    auto e2 = zf.getEntry("dir/file..ext");
+    EXPECT_NE(e2, nullptr);
+}
+
 // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

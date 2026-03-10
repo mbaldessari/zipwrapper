@@ -26,13 +26,46 @@
 #include "ZipHeader.h"
 
 #include <algorithm>
+#include <cctype>
 #include <iterator>
+#include <string_view>
 #include <vector>
 #include <zip.h>
 
 
 using zipios::ConstEntryPointer;
 using zipios::FileCollection;
+
+
+namespace
+{
+
+// Check if a zip entry name contains path-traversal sequences (Zip Slip, CVE-2018-1002200).
+bool isSafeEntryName(const char* name)
+{
+    if (!name || name[0] == '\0') {
+        return false;
+    }
+    if (name[0] == '/' || name[0] == '\\') {
+        return false;
+    }
+    if (std::isalpha(static_cast<unsigned char>(name[0])) && name[1] == ':') {
+        return false;
+    }
+    std::string_view sv(name);
+    size_t pos = 0;
+    while ((pos = sv.find("..", pos)) != std::string_view::npos) {
+        bool atStart = (pos == 0) || sv[pos - 1] == '/' || sv[pos - 1] == '\\';
+        bool atEnd = (pos + 2 >= sv.size()) || sv[pos + 2] == '/' || sv[pos + 2] == '\\';
+        if (atStart && atEnd) {
+            return false;
+        }
+        pos += 2;
+    }
+    return true;
+}
+
+}  // namespace
 using zipios::ZipHeader;
 
 
@@ -102,7 +135,7 @@ ZipHeader::ZipHeader(std::istream& inp, int s_off, int e_off)
     _entries.reserve(static_cast<size_t>(numEntries));
     for (zip_int64_t i = 0; i < numEntries; ++i) {
         const char* name = zip_get_name(d->archive, static_cast<zip_uint64_t>(i), 0);
-        if (name) {
+        if (name && isSafeEntryName(name)) {
             _entries.push_back(
                 std::make_shared<zipios::FileEntry>(name, static_cast<int>(i)));
         }
