@@ -35,11 +35,13 @@ if(BUILD_TESTING)
         tests/zipstreams.cpp
         tests/collectioncollection.cpp
         tests/testfiles.cpp
+        tests/gitrepo_roundtrip.cpp
     )
 
     target_compile_definitions(zipwrapper_tests PRIVATE
         TESTFILES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/testfiles"
         FREECAD_TESTFILES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/freecadtestfiles"
+        SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
     target_link_libraries(zipwrapper_tests PRIVATE
