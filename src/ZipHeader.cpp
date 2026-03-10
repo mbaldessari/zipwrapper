@@ -107,6 +107,7 @@ ZipHeader::ZipHeader(std::istream& inp, int s_off, int e_off)
                 std::make_shared<zipios::FileEntry>(name, static_cast<int>(i)));
         }
     }
+    buildIndex();
 
     _valid = true;
 }

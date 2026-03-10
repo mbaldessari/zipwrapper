@@ -68,10 +68,9 @@ std::string_view filenameFromPath(const std::string& path)
 ConstEntryPointer FileCollection::getEntry(const std::string& name, MatchPath matchpath) const
 {
     if (matchpath == MATCH) {
-        for (const auto& ep : _entries) {
-            if (ep->getName() == name) {
-                return ep;
-            }
+        auto it = _index.find(name);
+        if (it != _index.end()) {
+            return it->second;
         }
     }
     else {
@@ -119,6 +118,7 @@ ZipFile::ZipFile(const std::string& name, int /*s_off*/, int /*e_off*/)
             _entries.push_back(std::make_shared<FileEntry>(entryName, static_cast<int>(i)));
         }
     }
+    buildIndex();
     _valid = true;
 }
 

@@ -30,6 +30,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 
@@ -410,10 +411,23 @@ public:
     }
 
 protected:
+    /// @brief Build the name-to-entry index from _entries.
+    ///
+    /// Subclasses must call this after populating _entries.
+    void buildIndex()
+    {
+        _index.clear();
+        _index.reserve(_entries.size());
+        for (const auto& ep : _entries) {
+            _index.emplace(ep->getName(), ep);
+        }
+    }
+
     // NOLINTBEGIN
     ConstEntries _entries;   ///< The list of entries in this collection.
     std::string _name;       ///< The name/path of this collection.
     bool _valid = false;     ///< Whether the collection is in a usable state.
+    std::unordered_map<std::string, ConstEntryPointer> _index; ///< Name-to-entry lookup index.
     // NOLINTEND
 };
 
