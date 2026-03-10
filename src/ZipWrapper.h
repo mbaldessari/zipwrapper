@@ -24,12 +24,14 @@
 
 #pragma once
 
+#include <cctype>
 #include <cstring>
 #include <istream>
 #include <memory>
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -41,6 +43,39 @@
 /// C++17 wrapper around libzip and zlib.
 namespace zipios
 {
+
+
+namespace detail
+{
+
+/// @brief Check whether a zip entry name is safe from path-traversal attacks (Zip Slip).
+/// @param name The entry name to validate.
+/// @return @c true if the name is safe, @c false if it contains traversal sequences.
+inline bool isSafeEntryName(const char* name)
+{
+    if (!name || name[0] == '\0') {
+        return false;
+    }
+    if (name[0] == '/' || name[0] == '\\') {
+        return false;
+    }
+    if (std::isalpha(static_cast<unsigned char>(name[0])) && name[1] == ':') {
+        return false;
+    }
+    std::string_view sv(name);
+    size_t pos = 0;
+    while ((pos = sv.find("..", pos)) != std::string_view::npos) {
+        bool atStart = (pos == 0) || sv[pos - 1] == '/' || sv[pos - 1] == '\\';
+        bool atEnd = (pos + 2 >= sv.size()) || sv[pos + 2] == '/' || sv[pos + 2] == '\\';
+        if (atStart && atEnd) {
+            return false;
+        }
+        pos += 2;
+    }
+    return true;
+}
+
+}  // namespace detail
 
 
 /// @brief Exception thrown when a file collection operation fails.
