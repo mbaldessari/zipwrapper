@@ -614,7 +614,7 @@ public:
     /// @brief No-op; kept for zipios++ API compatibility.
     ///
     /// Entry advancement is handled entirely by getNextEntry().
-    void closeEntry();
+    static void closeEntry();
 
     /// @brief Close the underlying archive and release resources.
     void close();
