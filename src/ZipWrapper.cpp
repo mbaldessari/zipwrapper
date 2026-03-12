@@ -117,7 +117,7 @@ ZipFile::ZipFile(const std::string& name, int /*s_off*/, int /*e_off*/)
     _entries.reserve(static_cast<size_t>(numEntries));
     for (zip_int64_t i = 0; i < numEntries; ++i) {
         const char* entryName = zip_get_name(d->archive, static_cast<zip_uint64_t>(i), 0);
-        if (entryName && detail::isSafeEntryName(entryName)) {
+        if (entryName && isSafeEntryName(entryName)) {
             _entries.push_back(std::make_shared<FileEntry>(entryName, static_cast<int>(i)));
         }
     }
@@ -563,7 +563,7 @@ ConstEntryPointer ZipInputStream::getNextEntry()
         if (!name) {
             throw IOException("Failed to get entry name");
         }
-        if (detail::isSafeEntryName(name)) {
+        if (isSafeEntryName(name)) {
             break;
         }
     }

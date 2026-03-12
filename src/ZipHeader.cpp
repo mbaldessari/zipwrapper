@@ -102,7 +102,7 @@ ZipHeader::ZipHeader(std::istream& inp, int s_off, int e_off)
     _entries.reserve(static_cast<size_t>(numEntries));
     for (zip_int64_t i = 0; i < numEntries; ++i) {
         const char* name = zip_get_name(d->archive, static_cast<zip_uint64_t>(i), 0);
-        if (name && zipios::detail::isSafeEntryName(name)) {
+        if (name && zipios::isSafeEntryName(name)) {
             _entries.push_back(
                 std::make_shared<zipios::FileEntry>(name, static_cast<int>(i)));
         }

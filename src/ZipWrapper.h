@@ -46,9 +46,6 @@ namespace zipios
 {
 
 
-namespace detail
-{
-
 /// @brief Check whether a zip entry name is safe from path-traversal attacks (Zip Slip).
 /// @param name The entry name to validate.
 /// @return @c true if the name is safe, @c false if it contains traversal sequences.
@@ -75,8 +72,6 @@ inline bool isSafeEntryName(const char* name)
     }
     return true;
 }
-
-}  // namespace detail
 
 
 /// @brief Exception thrown when a file collection operation fails.
